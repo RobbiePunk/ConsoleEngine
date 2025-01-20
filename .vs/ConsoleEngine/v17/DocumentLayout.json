@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Projects\\C#\\ConsoleEngine\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{9E891409-4F51-4290-BEDC-6167400AD03D}|ConsoleEngine\\ConsoleEngine.csproj|d:\\projects\\c#\\consoleengine\\consoleengine\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9E891409-4F51-4290-BEDC-6167400AD03D}|ConsoleEngine\\ConsoleEngine.csproj|solutionrelative:consoleengine\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Projects\\C#\\ConsoleEngine\\ConsoleEngine\\Program.cs",
+              "RelativeDocumentMoniker": "ConsoleEngine\\Program.cs",
+              "ToolTip": "D:\\Projects\\C#\\ConsoleEngine\\ConsoleEngine\\Program.cs",
+              "RelativeToolTip": "ConsoleEngine\\Program.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABIAAAA9AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-01-20T18:07:10.548Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
