@@ -2,7 +2,16 @@
 using System.Drawing;
 using System.Numerics;
 using System.Text;
+using System.Timers;
+
 using static ConsoleEngine.Program;
+using static ConsoleEngine.Graphics;
+using static ConsoleEngine.Controller;
+
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using System.IO;
 
 namespace ConsoleEngine
 {
@@ -10,32 +19,15 @@ namespace ConsoleEngine
 
     internal class Program
     {
-        static Dictionary<ConsoleColor, Vector3> colors = new Dictionary<ConsoleColor, Vector3>()
-        {
-            { ConsoleColor.Black, new Vector3(12, 12, 12) },
-            { ConsoleColor.DarkBlue, new Vector3(0,55,218) },
-            { ConsoleColor.DarkGreen, new Vector3(19,161,14) },
-            { ConsoleColor.DarkCyan, new Vector3(58,150,221) },
-            { ConsoleColor.DarkRed, new Vector3(197,15,31) },
-            { ConsoleColor.DarkMagenta, new Vector3(136,23,152) },
-            { ConsoleColor.DarkYellow, new Vector3(193,156,0) },
-            { ConsoleColor.Gray, new Vector3(204,204,204) },
-            { ConsoleColor.DarkGray, new Vector3(118,118,118) },
-            { ConsoleColor.Blue, new Vector3(59,120,255) },
-            { ConsoleColor.Green, new Vector3(22,198,12) },
-            { ConsoleColor.Cyan, new Vector3(97,214,214) },
-            { ConsoleColor.Red, new Vector3(231,72,86) },
-            { ConsoleColor.Magenta, new Vector3(180,0,158) },
-            { ConsoleColor.Yellow, new Vector3(249,241,165) },
-            { ConsoleColor.White, new Vector3(242,242,242) }
-        };
+        public static bool logInfo = true;
+        public static int infoSize = 3;
 
-        static char[] charSet = { ' ', '.', ',', ':', ';', 'o', '*', 'p', '0', '%', '#', '$', '@' };
+        private static bool isRunning = true;
 
-        public static char GetColorChar(float color)
-        {
-            return charSet[(int)Math.Floor(color * (charSet.Length - 1))];
-        }
+        public static Stopwatch prepTime = new Stopwatch();
+        public static string prepTimeStr;
+        public static Stopwatch drawTime = new Stopwatch();
+        public static string drawTimeStr;
 
         public class Light
         {
@@ -77,8 +69,6 @@ namespace ConsoleEngine
 
             public float specular { get; set; }
 
-            public Vector3 color3 { get; set; }
-
             public Sphere(Vector3 center, double radius, float color, float specular)
             {
                 this.center = center;
@@ -86,15 +76,69 @@ namespace ConsoleEngine
                 this.color = color;
                 this.specular = specular;
             }
+        }
 
-            public Sphere(Vector3 center, double radius, Vector3 color, float specular)
+        public class Cube
+        {
+            public Vector3 center { get; set; }
+
+            public double size { get; set; }
+
+            public float color { get; set; }
+
+            public float specular { get; set; }
+
+            public Vector3[] points = new Vector3[8];
+
+            public Cube(Vector3 center, double size, float color, float specular)
             {
                 this.center = center;
-                this.radius = radius;
-                this.color3 = color;
+                this.size = size;
+                this.color = color;
                 this.specular = specular;
             }
 
+            public Cube(Vector3[] points, float color, float specular)
+            {
+                this.color = color;
+                this.specular = specular;
+
+                points.CopyTo(this.points, 0);
+            }
+
+        }
+
+        public class Polygon
+        {
+            public Vector3[] points;
+
+            public Polygon(Vector3[] points)
+            {
+                this.points = points;
+            }
+        }
+
+
+        public class Torus
+        {
+            public Vector3 center { get; set; }
+
+            public double bigRadius { get; set; }
+
+            public double smallRadius { get; set; }
+
+            public float color { get; set; }
+
+            public float specular { get; set; }
+
+            public Torus(Vector3 center, double R, double r, float color, float specular)
+            {
+                this.center = center;
+                this.bigRadius = R;
+                this.smallRadius = r;
+                this.color = color;
+                this.specular = specular;
+            }
         }
 
         public static List<Sphere> spheres = new List<Sphere>();
@@ -106,7 +150,7 @@ namespace ConsoleEngine
             public static int height { get; set; }
 
             public static char[] canvas;
-            public static Vector3[] canvas3;
+            public static string image;
 
             static Canvas()
             {
@@ -114,16 +158,7 @@ namespace ConsoleEngine
                 height = 50;
 
                 canvas = new char[width * height];
-                canvas3 = new Vector3[width * height];
-            }
-
-            public static void PutPixel3(int x, int y, Vector3 color)
-            {
-                x = x + width / 2;
-                y = y + height / 2;
-
-                if (x < width && y < height)
-                    canvas3[width * y + x] = color;
+                image = new string(canvas);
             }
 
             public static void PutPixel(int x, int y, char color)
@@ -135,11 +170,6 @@ namespace ConsoleEngine
                     canvas[width * y + x] = color;
             }
 
-            public static Vector3 GetPixel3(int x, int y)
-            {
-                return canvas3[width * y + x];
-            }
-
             public static string GetImage()
             {
                 StringBuilder sb = new StringBuilder();
@@ -148,12 +178,10 @@ namespace ConsoleEngine
                 {
                     for (int j = 0; j < width; j++)
                     {
-                        sb.Append(canvas[width * i + j].ToString());
+                        sb.Append(canvas[i * width + j].ToString());
                     }
                 }
-
                 return sb.ToString();
-
             }
 
         }
@@ -187,42 +215,6 @@ namespace ConsoleEngine
 
         }
 
-        static Vector3 RotateAroundY(Vector3 vector, float angle)
-        {
-            float cos = (float)Math.Cos(angle);
-            float sin = (float)Math.Sin(angle);
-
-            // Матрица поворота вокруг оси Y
-            float x = vector.X * cos + vector.Z * sin;
-            float z = -vector.X * sin + vector.Z * cos;
-
-            return new Vector3(x, vector.Y, z);
-        }
-
-        static Vector3 RotateAroundX(Vector3 vector, float angle)
-        {
-            float cos = (float)Math.Cos(angle);
-            float sin = (float)Math.Sin(angle);
-
-            // Матрица поворота вокруг оси X
-            float y = vector.Y * cos - vector.Z * sin;
-            float z = vector.Y * sin + vector.Z * cos;
-
-            return new Vector3(vector.X, y, z);
-        }
-
-        static Vector3 RotateAroundZ(Vector3 vector, float angle)
-        {
-            float cos = (float)Math.Cos(angle);
-            float sin = (float)Math.Sin(angle);
-
-            // Матрица поворота вокруг оси Z
-            float x = vector.X * cos - vector.Y * sin;
-            float y = vector.X * sin + vector.Y * cos;
-
-            return new Vector3(x, y, vector.Z);
-        }
-
         static Vector3 CanvasToViewPort(int x, int y)
         {
             Vector3 point = new Vector3(x * (float)Viewport.width / (float)Canvas.width,
@@ -232,8 +224,6 @@ namespace ConsoleEngine
             point = RotateAroundX(point, Camera.angle.X);
             point = RotateAroundY(point, Camera.angle.Y);
             //point = RotateAroundZ(point, Camera.angle.Z);
-
-            //point += Camera.position;
 
             return point;
         }
@@ -259,54 +249,21 @@ namespace ConsoleEngine
             return new Vector2((float)t1, (float)t2);
         }
 
-        static Vector3 TraceRayColored(Vector3 O, Vector3 D, float t_min, float t_max)
+        static Vector2 IntersectRayPolygon(Vector3 O, Vector3 D, Polygon polygon)
         {
-            float closest_t = t_max;
-            Sphere closest_sphere = null;
+            Vector3[] points = polygon.points;
+            Vector3 N = (points[2] - points[1]) * (points[0] - points[1]);
 
-            foreach (Sphere sphere in spheres)
-            {
-                Vector2 tvec = IntersectRaySphere(O, D, sphere);
-                float t1 = tvec.X;
-                float t2 = tvec.Y;
+            Vector3 Q = points[0];
 
-                if (t1 < closest_t && t1 > t_min && t1 < t_max)
-                {
-                    closest_t = t1;
-                    closest_sphere = sphere;
-                }
+            float t = Vector3.Dot(N, (Q - O)) / Vector3.Dot(N, D);
 
-                if (t2 < closest_t && t2 > t_min && t2 < t_max)
-                {
-                    closest_t = t2;
-                    closest_sphere = sphere;
-                }
-            }
+            return new Vector2((float)t, (float)t);
+        }
 
-            if (closest_sphere == null)
-                return Vector3.Zero;
-
-            Vector3 P = O + closest_t * D;
-            Vector3 N = P - closest_sphere.center;
-            N /= N.Length();
-
-            Vector3 color = closest_sphere.color3 * ComputeLighting(P, N, -D, closest_sphere.specular);
-
-            if (color.X < 0)
-                color.X = 0f;
-            if (color.Y < 0)
-                color.Y = 0f;
-            if (color.Z < 0)
-                color.Z = 0f;
-
-            if (color.X > 1)
-                color.X = 1f;
-            if (color.Y > 1)
-                color.Y = 1f;
-            if (color.Z > 1)
-                color.Z = 1f;
-
-            return color * 255;
+        static Vector2 IntersectRayTorus(Vector3 O, Vector3 D, Torus torus)
+        {
+            return new Vector2(0, 0);
         }
 
         static float TraceRay(Vector3 O, Vector3 D, float t_min, float t_max)
@@ -394,17 +351,14 @@ namespace ConsoleEngine
             Console.CursorVisible = false;
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
-            Console.SetWindowSize(Canvas.width, Canvas.height);
-            Console.SetBufferSize(Canvas.width, Canvas.height);
 
-            /*
-            spheres.Add(new Sphere(new Vector3(0, 0, 5), 1, new Vector3(0, 0, 255), 500));
-            spheres.Add(new Sphere(new Vector3(2, -1, 8), 1, new Vector3(0, 255, 0), 500));
-            spheres.Add(new Sphere(new Vector3(-2, -1, 5), 1, new Vector3(255, 0, 0), 10));
+            Console.OutputEncoding = Encoding.UTF8;
 
-            spheres.Add(new Sphere(new Vector3(0, -10001, 0), 10000, new Vector3(100, 100, 100), 1000));
+            if (!logInfo)
+                infoSize = 0;
 
-            */
+            Console.SetWindowSize(Canvas.width, Canvas.height + infoSize);
+            Console.SetBufferSize(Canvas.width, Canvas.height + infoSize);
 
             spheres.Add(new Sphere(new Vector3(0, 0, 5), 1, 1, 500));
             spheres.Add(new Sphere(new Vector3(2, -1, 8), 1, 1, 500));
@@ -416,69 +370,35 @@ namespace ConsoleEngine
             lights.Add(new Light(0.2f, new Vector3(2, 1, 0)));
             lights.Add(new Light(new Vector3(1, 4, 4), 0.1f));
 
-            PrepareFrame();
 
-            DrawFrame();
+            Thread keyPressThread = new Thread(MonitorKeysPress);
+            keyPressThread.Start();
 
             while (true)
             {
-                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-
-                if (keyInfo.Key == ConsoleKey.D)
-                {
-                    Camera.position += RotateAroundY(new Vector3(0.1f, 0, 0), Camera.angle.Y);
-                }
-                if (keyInfo.Key == ConsoleKey.A)
-                {
-                    Camera.position -= RotateAroundY(new Vector3(0.1f, 0, 0), Camera.angle.Y);
-                }
-                if (keyInfo.Key == ConsoleKey.W)
-                {
-                    Camera.position += RotateAroundY(new Vector3(0, 0, 0.1f), Camera.angle.Y);
-                }
-                if (keyInfo.Key == ConsoleKey.S)
-                {
-                    Camera.position -= RotateAroundY(new Vector3(0, 0, 0.1f), Camera.angle.Y);
-                }
-                if (keyInfo.Key == ConsoleKey.RightArrow)
-                {
-                    Camera.angle.Y += 0.1f;
-                }
-                if (keyInfo.Key == ConsoleKey.LeftArrow)
-                {
-                    Camera.angle.Y -= 0.1f;
-                }
-                if (keyInfo.Key == ConsoleKey.UpArrow)
-                {
-                    Camera.angle.X -= 0.1f;
-                }
-                if (keyInfo.Key == ConsoleKey.DownArrow)
-                {
-                    Camera.angle.X += 0.1f;
-                }
+                prepTime.Reset();
+                prepTime.Start();
 
                 PrepareFrame();
 
-                DrawFrame();
-            }
-        }
-
-        static void PrepareFrameColored()
-        {
-            Vector3 O = Camera.position;
-
-            for (int x = -Canvas.width / 2; x < Canvas.width / 2; x++)
-            {
-                for (int y = -Canvas.height / 2; y < Canvas.height / 2; y++)
+                if (!isKeyProcessed)
                 {
-                    Vector3 D = CanvasToViewPort(x, y);
-                    //char color = GetColorChar(TraceRay(O, D, 1, 100000));
-                    Vector3 color = TraceRayColored(O, D, 1, 100000);
-                    Canvas.PutPixel3(x, y, color);
+                    ProcessKey(keyToProcess);
+                    isKeyProcessed = true;
                 }
-            }
 
-            return;
+                prepTime.Stop();
+
+                prepTimeStr = string.Format("{0:00}:{1:00}", prepTime.Elapsed.Seconds, prepTime.Elapsed.Milliseconds);
+
+                drawTime.Reset();
+                drawTime.Start();
+
+                DrawFrame();
+
+                drawTime.Stop();
+                drawTimeStr = string.Format("{0:00}:{1:00}", drawTime.Elapsed.Seconds, drawTime.Elapsed.Milliseconds);
+            }
         }
 
         static void PrepareFrame()
@@ -494,7 +414,6 @@ namespace ConsoleEngine
                     Canvas.PutPixel(x, y, color);
                 }
             }
-
             return;
         }
 
@@ -502,53 +421,14 @@ namespace ConsoleEngine
         {
             Console.SetCursorPosition(0, 0);
             Console.Write(Canvas.GetImage());
-        }
 
-        static void DrawFrameColored()
-        {
-            Console.SetCursorPosition(0, 0);
-
-            for (int y = 0; y < Canvas.height; y++)
+            if (logInfo)
             {
-                for (int x = 0; x < Canvas.width; x++)
-                {
-                    Vector3 c = Canvas.GetPixel3(x, y);
-                    Console.ForegroundColor = ChooseColor(c);
-                    Console.Write(ChooseSymbol(c, Console.ForegroundColor));
-                    //Console.Write('@');
-                }
+                Console.WriteLine("Prepare Time: " + string.Format("{0:00}:{1:00}", prepTime.Elapsed.Seconds, prepTime.Elapsed.Milliseconds));
+                Console.WriteLine("Draw Time: " + string.Format("{0:00}:{1:00}", drawTime.Elapsed.Seconds, drawTime.Elapsed.Milliseconds));
+                Console.Write($"Position: {Camera.position.X}, {Camera.position.Y}, {Camera.position.Z}");
             }
 
-            //Console.Write(Canvas.GetImage());
-        }
-
-        static char ChooseSymbol(Vector3 c, ConsoleColor cc)
-        {
-            float d = (c - colors[cc]).Length() / 255;
-
-            if (d < 0)
-                d = 0;
-            if (d > 1)
-                d = 1;
-
-            return GetColorChar(d);
-        }
-
-        static ConsoleColor ChooseColor(Vector3 color)
-        {
-            ConsoleColor result = ConsoleColor.Black;
-            float minDistance = new Vector3(255, 255, 255).Length();
-
-            foreach (var c in colors)
-            {
-                if ((color - c.Value).Length() < minDistance)
-                {
-                    result = c.Key;
-                    minDistance = (color - c.Value).Length();
-                }
-            }
-
-            return result;
         }
 
     }

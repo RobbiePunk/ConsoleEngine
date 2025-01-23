@@ -26,3 +26,4 @@ D:\Projects\C#\ConsoleEngine\ConsoleEngine\obj\Debug\net8.0\refint\ConsoleEngine
 D:\Projects\C#\ConsoleEngine\ConsoleEngine\obj\Debug\net8.0\ConsoleEngine.pdb
 D:\Projects\C#\ConsoleEngine\ConsoleEngine\obj\Debug\net8.0\ConsoleEngine.genruntimeconfig.cache
 D:\Projects\C#\ConsoleEngine\ConsoleEngine\obj\Debug\net8.0\ref\ConsoleEngine.dll
+D:\Projects\C#\ConsoleEngine\ConsoleEngine\obj\Debug\net8.0\ConsoleEngine.sourcelink.json
